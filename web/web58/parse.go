@@ -12,15 +12,19 @@ import (
 func GetHouseList(res *http.Response) (list []string, err error) {
 
 	doc, err := goquery.NewDocumentFromResponse(res)
+	con, err := doc.Html()
+	fmt.Println(con)
 	if err != nil {
 		return
 	}
 	doc.Find(".qj-rentd").Each(func(n int, g *goquery.Selection) {
 		url, yes := g.Find("a").Attr("href")
+		fmt.Println(url)
 		if yes {
 			list = append(list, url)
 		}
 	})
+	fmt.Println("list=%q", list)
 
 	return
 }

@@ -28,3 +28,7 @@ func Test_HttpsUrlWithPort(t *testing.T) {
 func Test_RootUrl(t *testing.T) {
 	NewUrlTest(t, "https://www.google.com:80/")
 }
+func Test_HttpUrlNoQuery(t *testing.T) {
+	url := NewUrlTest(t, "http://www.tuicool.com/articles/UBbIFnA")
+	fmt.Printf(url.String())
+}
