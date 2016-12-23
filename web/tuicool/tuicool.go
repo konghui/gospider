@@ -1,9 +1,6 @@
 package tuicool
 
-import "github.com/konghui/gospider/web"
-
-var site = web.NewWebSite("www.tuicool.com")
-
+//var site, err = web.NewWebSite("www.tuicool.com")
 /*
 func GetUrlList(url string) (list []string, err error) {
 	var mytask task.ClientTask

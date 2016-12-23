@@ -1,6 +1,7 @@
 package urltool
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -10,7 +11,7 @@ type URL struct {
 	Domain string
 	Port   int
 	Uri    string
-	Ssl    bool
+	Proto  string
 }
 
 var url = `(https?)://(.*?):?(\d+)?(/.*)`
@@ -20,8 +21,19 @@ func NewURL(url string) (u *URL, err error) {
 	urls := urlperttern.FindStringSubmatch(url)
 
 	u = &URL{Domain: urls[2]}
+
+	u.Proto = urls[1]
+	u.Uri = urls[4]
+
 	if urls[3] == "" {
-		u.Port = 80
+		if u.Proto == "http" {
+			u.Port = 80
+		} else if u.Proto == "https" {
+			u.Port = 443
+		} else {
+			err = errors.New("unknown proto")
+			return
+		}
 	} else {
 		u.Port, err = strconv.Atoi(urls[3])
 		if err != nil {
@@ -29,23 +41,12 @@ func NewURL(url string) (u *URL, err error) {
 		}
 	}
 
-	u.Ssl = urls[1] == "https"
-	u.Uri = urls[4]
-
 	return
 }
 
 func (this *URL) String() (u string) {
 
-	var proto string
-
-	if this.Ssl {
-		proto = "https"
-	} else {
-		proto = "http"
-	}
-
-	u = fmt.Sprintf("%s://%s:%d%s", proto, this.Domain, this.Port, this.Uri)
+	u = fmt.Sprintf("%s://%s:%d%s", this.Proto, this.Domain, this.Port, this.Uri)
 	return
 }
 

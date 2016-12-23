@@ -43,12 +43,8 @@ func (this *TuiCool) ParseUrlToList(doc *goquery.Document) (list []string, err e
 		url, yes := g.Attr("href")
 		if yes {
 			if article.MatchString(url) {
-				fmt.Println(url)
 				list = append(list, url)
 			}
-			/*if strings.HasPrefix(url, "/articles/") {
-				list = append(list, url)
-			}*/
 		}
 	})
 
