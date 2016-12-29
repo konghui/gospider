@@ -8,6 +8,8 @@ import (
 	"regexp"
 
 	"github.com/PuerkitoBio/goquery"
+	log "github.com/Sirupsen/logrus"
+	"github.com/konghui/gospider/web"
 )
 
 type TuiCool struct {
@@ -21,6 +23,8 @@ type TuiCool struct {
 	origin string
 	// the content of the article
 	content string
+	// callbak handler
+	handler []func(*web.SpiderArgs) error
 }
 
 var list = make([]string, 0)
@@ -34,12 +38,19 @@ func (this *TuiCool) String() (rv string) {
 func NewTuiCool() (rv *TuiCool) {
 	rv = new(TuiCool)
 	rv.label = make([]string, 0)
+	rv.handler = make([]func(*web.SpiderArgs) error, 0)
+	rv.handler = []func(*web.SpiderArgs) error{rv.ParseUrlToList, rv.GetContent}
 	return
 }
 
-func (this *TuiCool) ParseUrlToList(doc *goquery.Document) (list []string, err error) {
+func (this *TuiCool) GetHandler() (fun []func(*web.SpiderArgs) error) {
+	fun = this.handler
+	return
+}
+
+func (this *TuiCool) ParseUrlToList(args *web.SpiderArgs) (err error) {
 	article := regexp.MustCompile(`^/articles/\w+$`)
-	doc.Find("a").Each(func(n int, g *goquery.Selection) {
+	args.Doc.Find("a").Each(func(n int, g *goquery.Selection) {
 		url, yes := g.Attr("href")
 		if yes {
 			if article.MatchString(url) {
@@ -47,21 +58,34 @@ func (this *TuiCool) ParseUrlToList(doc *goquery.Document) (list []string, err e
 			}
 		}
 	})
-
+	fmt.Println(list)
+	for _, v := range list {
+		newUrl := web.GetURLOfTheTaskPageLink(args.Task, v)
+		if visited, err := args.VisitMap.HasVisited(newUrl); err == nil {
+			if visited {
+				log.Infof("url:%s already visit. skip it", newUrl)
+				continue
+			}
+		} else {
+			log.Warn(err.Error())
+		}
+		args.Queue.Append(newUrl)
+		args.VisitMap.Visit(newUrl)
+	}
 	return
 }
 
 func Save() {
 }
 
-func (this *TuiCool) GetContent(doc *goquery.Document) (err error) {
+func (this *TuiCool) GetContent(args *web.SpiderArgs) (err error) {
 
 	defer func() {
 		if err := recover(); err != nil {
 			fmt.Println(err)
 		}
 	}()
-	article := doc.Find(".article_detail_bg")
+	article := args.Doc.Find(".article_detail_bg")
 	this.title = article.Find("h1").Text()
 	article.Find(".new-label").Each(func(n int, g *goquery.Selection) {
 		this.label = append(this.label, g.Text())
@@ -75,6 +99,6 @@ func (this *TuiCool) GetContent(doc *goquery.Document) (err error) {
 	p_t, err := time.Parse("2006-01-02 15:04:05", date)
 	this.timestamp = p_t.Unix()
 	this.origin = article.Find(".source").Find("a").Text()
-
+	fmt.Println(this)
 	return
 }

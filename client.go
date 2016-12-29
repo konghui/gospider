@@ -32,7 +32,7 @@ func CheckAlive() {
 
 func main() {
 	log.SetLevel(log.InfoLevel)
-	//queue.MyQueue.Append("http://www.tuicool.com/articles/UBbIFnA")
+
 	queue.MyQueue.Append("http://www.tuicool.com/")
 	//	go CheckAlive()
 	website, err := web.NewWebSite("www.tuicool.com")

@@ -18,8 +18,8 @@ import (
 )
 
 type SiteHandler interface {
-	ParseUrlToList(*goquery.Document) ([]string, error)
-	GetContent(*goquery.Document) error
+	String() string
+	GetHandler() (fun []func(*SpiderArgs) error)
 }
 
 type WebSite struct {
@@ -105,52 +105,41 @@ func GetURLOfTheTaskPageLink(t *task.ClientTask, link string) (u string) {
 	return
 }
 
+func (this *WebSite) NewSpiderArgs(url string) (args *SpiderArgs) {
+
+	log.Infof("start url: %s", url)
+	task, err := task.NewTask(url)
+	this.visitPool.Visit(url)
+	response, err := this.SendHttpRequest(task)
+	defer response.Body.Close()
+	if err != nil {
+		log.Warning(err.Error())
+	}
+
+	doc, err := goquery.NewDocumentFromResponse(response)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	args = &SpiderArgs{Doc: doc, Response: response, VisitMap: this.visitPool, Queue: queue.MyQueue, Task: task}
+	return
+}
+
 func (this *WebSite) StartLoop() {
 	for {
+
 		url := queue.MyQueue.Pop()
 		if url == "" {
 			log.Warning("all the work has done")
 			break
 		}
-		log.Infof("start url: %s", url)
-		task, err := task.NewTask(url)
-		this.visitPool.Visit(url)
-		response, err := this.SendHttpRequest(task)
-		defer response.Body.Close()
-		if err != nil {
-			log.Warning(err.Error())
-		}
-		doc, err := goquery.NewDocumentFromResponse(response)
-		if err != nil {
-			log.Fatal(err.Error())
-		}
-
-		list, err := this.handler.ParseUrlToList(doc)
-		if err != nil {
-			log.Warningf(err.Error())
-			return
-		}
-
-		for _, v := range list {
-			newUrl := GetURLOfTheTaskPageLink(task, v)
-			if visited, err := this.visitPool.HasVisited(newUrl); err == nil {
-				if visited {
-					log.Infof("url:%s already visit. skip it", newUrl)
-					continue
-				}
-			} else {
-				log.Warn(err.Error())
+		args := this.NewSpiderArgs(url)
+		for _, handler := range this.handler.GetHandler() {
+			err := handler(args)
+			if err != nil {
+				log.Warningf(err.Error())
+				return
 			}
-			queue.MyQueue.Append(newUrl)
-			this.visitPool.Visit(newUrl)
 		}
-
-		err = this.handler.GetContent(doc)
-		if err != nil {
-			log.Warningf(err.Error())
-		}
-		log.Info(this.handler)
-
 		time.Sleep(1 * time.Second)
 	}
 }
